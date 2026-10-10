@@ -1,0 +1,713 @@
+/* Playground layout — plain CSS, no framework, so this UI can be hosted inside
+   a VS Code / Kiro webview with no extra tooling. Every surface color derives
+   from a `--vscode-*` host token with a standalone light fallback (design §10),
+   so the playground adapts to the editor theme and still looks right as a plain
+   web app. */
+
+:root {
+  /* ── Theme tokens: host-derived with standalone light fallback (§10) ── */
+  --pg-bg: var(--vscode-editor-background, #fafafc);
+  --pg-panel: var(--vscode-editor-background, #ffffff);
+  --pg-border: var(--vscode-panel-border, #e6e8f0);
+  --pg-text: var(--vscode-editor-foreground, #1b1b2b);
+  --pg-muted: var(--vscode-descriptionForeground, #6b7280);
+  --pg-accent: var(--vscode-focusBorder, #4f46e5);
+  --pg-btn-bg: var(--vscode-button-background, #4f46e5);
+  --pg-btn-fg: var(--vscode-button-foreground, #ffffff);
+  --pg-input-bg: var(--vscode-input-background, #ffffff);
+  --pg-input-border: var(--vscode-input-border, #d0d3de);
+  --pg-hover: var(--vscode-list-hoverBackground, #f0f1f7);
+  --pg-code-bg: var(--vscode-textCodeBlock-background, #1e1e2e);
+  --pg-code-fg: var(--vscode-editor-foreground, #e6e6f0);
+  --pg-error: var(--vscode-errorForeground, #b91c1c);
+
+  /* Drop-zone success wash derived from the accent. */
+  --pg-ok: color-mix(in srgb, var(--pg-accent) 60%, transparent);
+  --pg-ok-bg: color-mix(in srgb, var(--pg-accent) 12%, transparent);
+
+  /* ── Geometry tokens (theme-agnostic) ── */
+  --pg-radius: 12px;
+  --pg-radius-sm: 8px;
+  --pg-gap: 16px;
+  --pg-space: 12px;
+  --pg-shadow: 0 1px 2px rgba(16, 18, 34, 0.06), 0 2px 8px rgba(16, 18, 34, 0.04);
+}
+
+/* Plain dark-mode browser (no webview host vars present): override the
+   fallbacks only. The `--vscode-*` reads still win when the host provides
+   them, because the fallback is the SECOND argument of each `var()`. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pg-bg: var(--vscode-editor-background, #15161c);
+    --pg-panel: var(--vscode-editor-background, #1d1e26);
+    --pg-border: var(--vscode-panel-border, #2c2e3a);
+    --pg-text: var(--vscode-editor-foreground, #e6e6f0);
+    --pg-muted: var(--vscode-descriptionForeground, #9ca3af);
+    --pg-accent: var(--vscode-focusBorder, #818cf8);
+    --pg-btn-bg: var(--vscode-button-background, #4f46e5);
+    --pg-btn-fg: var(--vscode-button-foreground, #ffffff);
+    --pg-input-bg: var(--vscode-input-background, #23242e);
+    --pg-input-border: var(--vscode-input-border, #3a3c4a);
+    --pg-hover: var(--vscode-list-hoverBackground, #262835);
+    --pg-code-bg: var(--vscode-textCodeBlock-background, #14151b);
+    --pg-code-fg: var(--vscode-editor-foreground, #e6e6f0);
+  }
+}
+
+/* Explicit webview theme-class hooks for spots where token mapping alone is
+   insufficient (e.g. forcing chip contrast under high contrast). */
+body.vscode-high-contrast {
+  --pg-border: var(--vscode-contrastBorder, #ffffff);
+  --pg-shadow: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  color: var(--pg-text);
+  background: var(--pg-bg);
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Visible focus ring in both themes (maps to --vscode-focusBorder on host). */
+:focus-visible {
+  outline: 2px solid var(--pg-accent);
+  outline-offset: 1px;
+}
+
+/* ── App shell: topbar + two-column grid ──────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-gap);
+  padding: var(--pg-gap);
+  min-height: 100vh;
+}
+
+.app__topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--pg-gap);
+  flex-wrap: wrap;
+}
+
+.app__brand h1 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.app__brand p {
+  margin: 4px 0 0;
+  color: var(--pg-muted);
+  font-size: 13px;
+  max-width: 60ch;
+}
+
+.app__brand code {
+  background: var(--pg-hover);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+.app__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app__create-root {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app__create-root-label {
+  font-size: 12px;
+  color: var(--pg-muted);
+}
+
+.app__btn,
+.json-view__toolbar button,
+.props__add button,
+.sample__meta-head button {
+  border: 1px solid var(--pg-border);
+  background: var(--pg-panel);
+  color: var(--pg-text);
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.app__btn:hover:not(:disabled),
+.json-view__toolbar button:hover,
+.props__add button:hover,
+.sample__meta-head button:hover {
+  background: var(--pg-hover);
+}
+
+.app__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The grid: left JSON editor, right stacked column (each scrolls on its own). */
+.app__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: var(--pg-gap);
+  flex: 1;
+  min-height: 0;
+}
+
+.app__json {
+  background: var(--pg-panel);
+  border: 1px solid var(--pg-border);
+  border-radius: var(--pg-radius);
+  padding: var(--pg-space);
+  min-width: 0;
+  min-height: 0;
+  overflow: auto; /* left editor owns its scroll; never moved by right column */
+}
+
+.app__right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--pg-space);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto; /* right column scrolls on its OWN — sample-data scroll
+                       never moves the preview or the left JSON editor */
+}
+
+.app__drop-hint {
+  color: var(--pg-error);
+  font-size: 12.5px;
+  margin: 0;
+}
+
+/* The contextual panel container (palette ↔ properties toggle). */
+.app__context {
+  background: var(--pg-panel);
+  border: 1px solid var(--pg-border);
+  border-radius: var(--pg-radius);
+  padding: var(--pg-space);
+}
+
+/* ── Native type picker (Crear raíz / Añadir hijo) ────────────── */
+.type-picker,
+.props__value-input,
+.props__key-input,
+.sample__input,
+.json-view__textarea {
+  background: var(--pg-input-bg);
+  color: var(--pg-text);
+  border: 1px solid var(--pg-input-border);
+  border-radius: var(--pg-radius-sm);
+  font-size: 12.5px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+.type-picker {
+  cursor: pointer;
+}
+
+/* ── JSON view (code-editor look) ─────────────────────────────── */
+.json-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+
+.json-view__toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.json-view__textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 340px;
+  background: var(--pg-code-bg);
+  color: var(--pg-code-fg);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  padding: 10px;
+  resize: vertical;
+}
+
+.json-view__error {
+  color: var(--pg-error);
+  font-size: 13px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.json-view__hint,
+.props__hint,
+.palette__hint,
+.palette__empty {
+  color: var(--pg-muted);
+  font-size: 12.5px;
+  margin: 0;
+}
+
+/* ── Preview card (inline, NON-blocking — no modal/backdrop/portal) ── */
+.preview-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--pg-panel);
+  border: 1px solid var(--pg-border);
+  border-radius: var(--pg-radius);
+  box-shadow: var(--pg-shadow);
+  overflow: hidden;
+}
+
+.preview-card__header,
+.preview-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px var(--pg-space);
+  border-bottom: 1px solid var(--pg-border);
+}
+
+.preview-card__footer {
+  border-bottom: none;
+  border-top: 1px solid var(--pg-border);
+  justify-content: flex-end;
+}
+
+.preview-card__title {
+  font-size: 14px;
+  margin: 0;
+}
+
+.preview-card__select-root,
+.preview-card__ok {
+  border: 1px solid var(--pg-border);
+  background: var(--pg-panel);
+  color: var(--pg-text);
+  padding: 5px 14px;
+  border-radius: var(--pg-radius-sm);
+  cursor: pointer;
+  font-size: 12.5px;
+}
+
+.preview-card__ok {
+  background: var(--pg-btn-bg);
+  color: var(--pg-btn-fg);
+  border-color: var(--pg-btn-bg);
+}
+
+.preview-card__stage {
+  padding: var(--pg-space);
+  min-height: 220px;
+}
+
+.preview-card__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 180px;
+  border: 1px dashed var(--pg-border);
+  border-radius: var(--pg-radius-sm);
+  color: var(--pg-muted);
+  text-align: center;
+  padding: 24px 12px;
+}
+
+.preview-card__empty--over {
+  border-color: var(--pg-ok);
+  background: var(--pg-ok-bg);
+}
+
+.preview-card__hint {
+  margin: 0;
+  font-size: 12.5px;
+  max-width: 36ch;
+}
+
+/* ── Owned preview selection + drag layer (design §7) ─────────── */
+/* The .pv-node wrapper is zero-geometry (display:contents, set inline) and only
+   carries data-node-path for delegated click resolution; it must NOT paint. The
+   REAL boxed handle/drop targets below carry all geometry and theming. */
+.pv-node.is-selected > .pv-node__handle {
+  outline: 2px solid var(--pg-accent);
+  outline-offset: 1px;
+}
+
+.pv-node__handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  border: 1px solid var(--pg-border);
+  border-radius: 4px;
+  background: var(--pg-panel);
+  color: var(--pg-muted);
+  cursor: grab;
+  font-size: 11px;
+  line-height: 1;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.pv-node__handle:active {
+  cursor: grabbing;
+}
+
+.pv-node--empty {
+  display: inline-block;
+  padding: 8px 12px;
+  border: 1px dashed var(--pg-border);
+  border-radius: var(--pg-radius-sm);
+  color: var(--pg-muted);
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+.pv-dropline {
+  height: 6px;
+  border-radius: 3px;
+  margin: 2px 0;
+  background: transparent;
+}
+
+.pv-dropline--over {
+  background: var(--pg-ok);
+}
+
+.pv-node--drop-target {
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px dashed var(--pg-border);
+  border-radius: var(--pg-radius-sm);
+  color: var(--pg-muted);
+  font-size: 12px;
+}
+
+.pv-node--drop-target--over {
+  border-color: var(--pg-ok);
+  background: var(--pg-ok-bg);
+}
+
+.pv-node--drop-hint {
+  font-size: 11.5px;
+}
+
+/* ── Palette (v3: visible group headers) ──────────────────────── */
+.palette__title,
+.props__title,
+.sample__title {
+  font-size: 13px;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pg-muted);
+}
+
+.palette__group {
+  margin-top: var(--pg-space);
+}
+
+.palette__group:first-of-type {
+  margin-top: 8px;
+}
+
+.palette__group-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 6px;
+  color: var(--pg-muted);
+}
+
+.palette__group--containers .palette__group-label {
+  color: var(--pg-accent);
+}
+
+.palette__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px;
+}
+
+.palette__item {
+  border: 1px solid var(--pg-border);
+  background: var(--pg-panel);
+  color: var(--pg-text);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: grab;
+}
+
+.palette__item:hover {
+  background: var(--pg-hover);
+}
+
+.palette__item--container {
+  border-color: var(--pg-accent);
+  color: var(--pg-accent);
+}
+
+/* ── Properties panel ─────────────────────────────────────────── */
+.props__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.props__title code {
+  background: var(--pg-hover);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.props__deselect,
+.props__delete {
+  border: 1px solid var(--pg-border);
+  background: var(--pg-panel);
+  color: var(--pg-text);
+  border-radius: var(--pg-radius-sm);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.props__delete:hover {
+  color: var(--pg-error);
+  border-color: var(--pg-error);
+}
+
+.props__container-hint {
+  color: var(--pg-accent);
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+.props__structure {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: var(--pg-space);
+}
+
+.props__add-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.props__add-child-label {
+  font-size: 12px;
+  color: var(--pg-muted);
+}
+
+.props__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.props__row,
+.props__add,
+.sample__meta-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.props__key-input {
+  flex: 0 0 34%;
+}
+
+.props__value-input {
+  flex: 1;
+}
+
+.props__complex {
+  flex: 1;
+  color: var(--pg-muted);
+  font-size: 12px;
+}
+
+/* Color-coded, text-labeled value-type chip (meaning never color-only). */
+.props__chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--pg-border);
+  color: var(--pg-text);
+  background: var(--pg-hover);
+  white-space: nowrap;
+}
+
+.props__chip[data-color="green"] {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.props__chip[data-color="blue"] {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.props__chip[data-color="gold"] {
+  border-color: #d97706;
+  color: #d97706;
+}
+
+.props__chip[data-color="purple"] {
+  border-color: #9333ea;
+  color: #9333ea;
+}
+
+.props__chip[data-color="geekblue"] {
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+
+.props__chip[data-color="default"] {
+  border-color: var(--pg-border);
+  color: var(--pg-muted);
+}
+
+.props__remove,
+.sample__remove {
+  border: none;
+  background: transparent;
+  color: var(--pg-muted);
+  cursor: pointer;
+}
+
+.props__remove:hover,
+.sample__remove:hover {
+  color: var(--pg-error);
+}
+
+.props__add {
+  margin-top: var(--pg-space);
+}
+
+.props__text {
+  margin-top: var(--pg-space);
+}
+
+.props__text-label {
+  display: block;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+
+.props__text-input {
+  width: 100%;
+  min-height: 60px;
+  background: var(--pg-input-bg);
+  color: var(--pg-text);
+  border: 1px solid var(--pg-input-border);
+  border-radius: var(--pg-radius-sm);
+  padding: 8px;
+  font-size: 12.5px;
+  resize: vertical;
+}
+
+/* ── Sample meta panel (interpolation inputs, always at bottom) ── */
+.sample {
+  background: var(--pg-panel);
+  border: 1px solid var(--pg-border);
+  border-radius: var(--pg-radius);
+  padding: var(--pg-space);
+}
+
+.sample__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sample__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sample__label {
+  font-size: 11.5px;
+  color: var(--pg-muted);
+}
+
+.sample__meta {
+  margin-top: 10px;
+}
+
+.sample__meta-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.sample__meta-row {
+  margin-bottom: 6px;
+}
+
+/* ── Copy JSON button ─────────────────────────────────────────── */
+.copy-json {
+  border: 1px solid var(--pg-btn-bg);
+  background: var(--pg-btn-bg);
+  color: var(--pg-btn-fg);
+  padding: 6px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ── Responsive: < 900px stacks to a single column ────────────── */
+@media (max-width: 900px) {
+  .app__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Single-column page scroll: regions no longer own independent scroll. */
+  .app__json,
+  .app__right {
+    overflow: visible;
+    min-height: 0;
+  }
+
+  .sample__fields {
+    grid-template-columns: 1fr;
+  }
+}

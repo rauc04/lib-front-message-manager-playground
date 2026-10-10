@@ -1,0 +1,10 @@
+node_modules
+dist
+.npmrc
+*.local
+.DS_Store
+
+# Build artifacts
+tsconfig.tsbuildinfo
+vite.config.js
+vite.config.d.ts
