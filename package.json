@@ -13,7 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@macropaytd/lib-front-fifo-message-manager": "file:../lib-front-fifo-message-manager",
+    "@macropaytd/lib-front-fifo-message-manager": "^1.0.2",
     "@macropaytd/lib-front-ui-components": "^0.11.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

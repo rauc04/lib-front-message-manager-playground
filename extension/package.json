@@ -1,0 +1,41 @@
+{
+  "name": "message-manager-playground",
+  "displayName": "Message Manager Playground",
+  "description": "Editor visual para diseñar árboles de componentes de modales de @macropaytd/lib-front-fifo-message-manager, embebido en un webview.",
+  "version": "0.0.1",
+  "publisher": "macropaytd",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/macropaytd/lib-front-message-manager-playground"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "messageManagerPlayground.open",
+        "title": "Abrir Message Manager Playground",
+        "category": "Message Manager"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "build:webview": "cross-env VSCODE_WEBVIEW=1 npm --prefix .. run build && npm run compile && node ./out/copy-webview.js",
+    "package": "npm run build:webview && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.6.0"
+  }
+}
